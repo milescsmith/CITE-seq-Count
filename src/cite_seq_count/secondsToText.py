@@ -1,12 +1,7 @@
 # Gist found here: https://gist.github.com/Highstaker/280a09591df4a5fb1363b0bbaf858f0d
 
 
-def pluralizeRussian(
-    number: float,
-    nom_sing: str,
-    gen_sing: str,
-    gen_pl: str
-    ) -> str:
+def pluralizeRussian(number: float, nom_sing: str, gen_sing: str, gen_pl: str) -> str:
     """
     Changes the hours, minutes, seconds to plural
     """

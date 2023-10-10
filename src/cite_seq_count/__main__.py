@@ -16,6 +16,7 @@ from dateutil import tz
 from loguru import logger
 from multiprocess import Pool, cpu_count
 from rich import print as rprint
+from tqdm.rich import tqdm
 
 from cite_seq_count import (
     __version__,
@@ -524,7 +525,7 @@ def main(
     # If given, use whitelist for top cells
     if whitelist:
         top_cells = whitelist
-        for missing_cell in top_cells:
+        for missing_cell in tqdm(top_cells):
             if missing_cell in final_results:
                 continue
             final_results[missing_cell] = {}
@@ -534,7 +535,7 @@ def main(
     else:
         # Select top cells based on total umis per cell
         top_cells_tuple = umis_per_cell.most_common(expected_cells)
-        top_cells = {pair[0] for pair in top_cells_tuple}
+        top_cells = {pair[0] for pair in tqdm(top_cells_tuple)}
 
     # UMI correction
 
@@ -556,7 +557,8 @@ def main(
         top_cells.remove(cell_barcode)
 
     # Create sparse aberrant cells matrix
-    (umi_aberrant_matrix, read_aberrant_matrix) = processing.generate_sparse_matrices(
+    # (umi_aberrant_matrix, read_aberrant_matrix) = processing.generate_sparse_matrices(
+    umi_aberrant_matrix = processing.generate_sparse_matrices(
         final_results=final_results,
         ordered_tags_map=ordered_tags_map,
         top_cells=aberrant_cells,

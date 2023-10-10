@@ -1,0 +1,12 @@
+CITE-seq-Count \
+  --read1 sample_s_to_kite_R1.fastq.gz \
+  --read2 sample_s_to_kite_R2.fastq.gz \
+  --tags /mnt/group/references/miscellaneous/bustools/totalseq_b_ref_citeseq_count_formatted.csv \
+  --cell_barcode_first_base 1 \
+  --cell_barcode_last_base 16 \
+  --umi_first_base 17 \
+  --umi_last_base 35 \
+  --whitelist /mnt/group/software/cellranger-atac-2.1.0/lib/python/atac/barcodes/737K-arc-v1.txt \
+  --output citeseq_count \
+  --threads 16 \
+  --expected_cells 10000

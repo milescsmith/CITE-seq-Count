@@ -5,7 +5,7 @@ from collections import Counter
 from pathlib import Path
 
 import pandas as pd
-from scipy import io
+from scipy import io, sparse
 
 
 def write_to_files(
@@ -44,7 +44,9 @@ def write_to_files(
     prefix.joinpath("matrix.mtx").unlink()
 
 
-def write_dense(sparse_matrix, index: list[str], columns: tuple[str], outfolder: Path, filename: Path) -> None:
+def write_dense(
+    sparse_matrix: sparse.dok_matrix, index: list[str], columns: tuple[str], outfolder: Path, filename: Path
+) -> None:
     """
     Writes a dense matrix in a csv format
 
@@ -55,7 +57,8 @@ def write_dense(sparse_matrix, index: list[str], columns: tuple[str], outfolder:
        outfolder (str): Output folder
        filename (str): Filename
     """
-    outfolder = Path(outfolder).mkdir(exist_ok=True)
+    if not outfolder.exists():
+        outfolder.mkdir(exist_ok=True)
     pandas_dense = pd.DataFrame(data=sparse_matrix.todense(), columns=tuple(columns), index=tuple(index))
     pandas_dense.to_csv(path_or_buf=outfolder.joinpath(filename), sep="\t")
 
@@ -72,6 +75,8 @@ def write_unmapped(merged_no_match: Counter, top_unknowns: int, outfolder: Path,
     """
 
     top_unmapped = merged_no_match.most_common(top_unknowns)
+    if not outfolder.exists():
+        outfolder.mkdir(exist_ok=True)
 
     with outfolder.joinpath(filename).open("w") as unknown_file:
         unknown_file.write("tag,count\n")
