@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Fixed
   - Updated to work with newer versions of Pandas
 
+### Changed
+  - Can use gzipped whitelist files
+  - More development items, but:
+    - Replaced using setup.py/setuptools with pyproject.toml/huak
+    - Replaced argparse with typer
+    - Add type hinting
+
+### Broken
+  - Tests currently do not pass because I changed how file
+    paths are handled and have yet to adjust the tests to 
+    match
 
 ## [1.4.4] - 10.12.2020
 ### Changed

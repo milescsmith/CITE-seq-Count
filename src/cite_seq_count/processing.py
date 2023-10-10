@@ -8,6 +8,7 @@ from itertools import islice
 import Levenshtein
 import pybktree
 from numpy import int32
+from rich import print as rprint
 from scipy import sparse
 from umi_tools import network, whitelist_methods
 
@@ -30,7 +31,6 @@ def find_best_match(TAG_seq, tags, maximum_distance):
     Returns:
         best_match (string): The TAG name that will be used for counting.
     """
-    best_match = "unmapped"
     best_score = maximum_distance
     for tag, name in tags.items():
         score = Levenshtein.hamming(tag, TAG_seq[: len(tag)])
@@ -39,9 +39,8 @@ def find_best_match(TAG_seq, tags, maximum_distance):
             return name
         elif score <= best_score:
             best_score = score
-            best_match = name
-            return best_match
-    return best_match
+            return name
+    return "unmapped"
 
 
 def find_best_match_shift(TAG_seq, tags, maximum_distance):
@@ -60,9 +59,8 @@ def find_best_match_shift(TAG_seq, tags, maximum_distance):
     Returns:
         best_match (string): The TAG name that will be used for counting.
     """
-    best_match = "unmapped"
     best_score = maximum_distance
-    shifts = range(0, len(TAG_seq) - len(max(tags, key=len)))
+    shifts = range(len(TAG_seq) - len(max(tags, key=len)))
 
     for shift in shifts:
         for tag, name in tags.items():
@@ -72,9 +70,8 @@ def find_best_match_shift(TAG_seq, tags, maximum_distance):
                 return name
             elif score <= best_score:
                 best_score = score
-                best_match = name
-                return best_match
-    return best_match
+                return name
+    return "unmapped"
 
 
 def map_reads(
@@ -84,7 +81,6 @@ def map_reads(
     barcode_slice,
     umi_slice,
     indexes,
-    whitelist,
     debug,
     start_trim,
     maximum_distance,
@@ -119,12 +115,12 @@ def map_reads(
     no_match = Counter()
     n = 1
     t = time.time()
-    with gzip.open(read1_path, "rt") as textfile1, gzip.open(
-        read2_path, "rt"
-    ) as textfile2:
+    with (gzip.open(read1_path, "rt") as textfile1, gzip.open(
+            read2_path, "rt"
+        ) as textfile2):
         # Read all 2nd lines from 4 line chunks. If first_n not None read only 4 times the given amount.
         secondlines = islice(
-            zip(textfile1, textfile2), indexes[0] * 4 + 1, indexes[1] * 4 + 1, 4
+            zip(textfile1, textfile2, strict=True), indexes[0] * 4 + 1, indexes[1] * 4 + 1, 4
         )
         for read1, read2 in secondlines:
             read1 = read1.strip()
@@ -132,7 +128,7 @@ def map_reads(
 
             # Progress info
             if n % 1000000 == 0:
-                print(
+                rprint(
                     f"Processed 1,000,000 reads in {secondsToText.secondsToText(time.time() - t)}. Total "
                     f"reads: {n:,} in child {os.getpid()}"
                 )
@@ -142,43 +138,30 @@ def map_reads(
             # Get cell and umi barcodes.
             cell_barcode = read1[barcode_slice]
             # This change in bytes is required by umi_tools for umi correction
-            UMI = bytes(read1[umi_slice], "ascii")
+            umi = bytes(read1[umi_slice], "ascii")
             # Trim potential starting sequences
-            TAG_seq = read2[start_trim:]
+            tag_seq = read2[start_trim:]
 
             if cell_barcode not in results:
                 results[cell_barcode] = defaultdict(Counter)
 
             if sliding_window:
-                best_match = find_best_match_shift(TAG_seq, tags, maximum_distance)
+                best_match = find_best_match_shift(tag_seq, tags, maximum_distance)
             else:
-                best_match = find_best_match(TAG_seq, tags, maximum_distance)
+                best_match = find_best_match(tag_seq, tags, maximum_distance)
 
-            results[cell_barcode][best_match][UMI] += 1
+            results[cell_barcode][best_match][umi] += 1
 
             if best_match == "unmapped":
-                no_match[TAG_seq] += 1
+                no_match[tag_seq] += 1
 
             if debug:
-                print(
-                    "\nline:{}\n"
-                    "cell_barcode:{}\tUMI:{}\tTAG_seq:{}\n"
-                    "line length:{}\tcell barcode length:{}\tUMI length:{}\tTAG sequence length:{}\n"
-                    "Best match is: {}".format(
-                        read1 + read2,
-                        cell_barcode,
-                        UMI,
-                        TAG_seq,
-                        len(read1 + read2),
-                        len(cell_barcode),
-                        len(UMI),
-                        len(TAG_seq),
-                        best_match,
-                    )
+                rprint(
+                    f"\nline:{read1 + read2}\ncell_barcode:{cell_barcode}\tUMI:{umi}\tTAG_seq:{tag_seq}\nline length:{len(read1 + read2)}\tcell barcode length:{len(cell_barcode)}\tUMI length:{len(umi)}\tTAG sequence length:{len(tag_seq)}\nBest match is: {best_match}"
                 )
                 sys.stdout.flush()
             n += 1
-    print(
+    rprint(
         f"Mapping done for process {os.getpid()}. Processed {n - 1:,} reads"
     )
     sys.stdout.flush()
@@ -207,16 +190,16 @@ def merge_results(parallel_results):
         for cell_barcode in mapped:
             if cell_barcode not in merged_results:
                 merged_results[cell_barcode] = defaultdict(Counter)
-            for TAG in mapped[cell_barcode]:
+            for tag in mapped[cell_barcode]:
                 # Test the counter. Returns false if empty
-                if mapped[cell_barcode][TAG]:
-                    for UMI in mapped[cell_barcode][TAG]:
-                        merged_results[cell_barcode][TAG][UMI] += mapped[cell_barcode][
-                            TAG
-                        ][UMI]
-                        umis_per_cell[cell_barcode] += len(mapped[cell_barcode][TAG])
-                        reads_per_cell[cell_barcode] += mapped[cell_barcode][TAG][UMI]
-        merged_no_match.update(unmapped)
+                if mapped[cell_barcode][tag]:
+                    for umi in mapped[cell_barcode][tag]:
+                        merged_results[cell_barcode][tag][umi] += mapped[cell_barcode][
+                            tag
+                        ][umi]
+                        umis_per_cell[cell_barcode] += len(mapped[cell_barcode][tag])
+                        reads_per_cell[cell_barcode] += mapped[cell_barcode][tag][umi]
+        merged_no_match |= unmapped
     return (merged_results, umis_per_cell, reads_per_cell, merged_no_match)
 
 
@@ -235,21 +218,21 @@ def correct_umis(final_results, collapsing_threshold, top_cells, max_umis):
         corrected_umis (int): How many umis have been corrected.
         aberrant_umi_count_cells (set): Set of uncorrected cells.
     """
-    print("Correcting umis")
+    rprint("Correcting umis")
     corrected_umis = 0
     aberrant_umi_count_cells = set()
     for cell_barcode in top_cells:
-        for TAG in final_results[cell_barcode]:
-            n_umis = len(final_results[cell_barcode][TAG])
+        for tag in final_results[cell_barcode]:
+            n_umis = len(final_results[cell_barcode][tag])
             if n_umis > 1 and n_umis <= max_umis:
                 umi_clusters = network.UMIClusterer()
-                UMIclusters = umi_clusters(
-                    final_results[cell_barcode][TAG], collapsing_threshold
+                umiclusters = umi_clusters(
+                    final_results[cell_barcode][tag], collapsing_threshold
                 )
                 (new_res, temp_corrected_umis) = update_umi_counts(
-                    UMIclusters, final_results[cell_barcode][TAG]
+                    umiclusters, final_results[cell_barcode][tag]
                 )
-                final_results[cell_barcode][TAG] = new_res
+                final_results[cell_barcode][tag] = new_res
                 corrected_umis += temp_corrected_umis
             elif n_umis > max_umis:
                 aberrant_umi_count_cells.add(cell_barcode)
@@ -296,19 +279,19 @@ def collapse_cells(true_to_false, umis_per_cell, final_results, ab_map):
         final_results (dict): Same as input but with corrected cell barcodes.
         corrected_barcodes (int): How many cell barcodes have been corrected.
     """
-    print("Collapsing cell barcodes")
+    rprint("Collapsing cell barcodes")
     corrected_barcodes = 0
     for real_barcode in true_to_false:
         # If the cell barcode is not in the results
         if real_barcode not in final_results:
             final_results[real_barcode] = defaultdict()
-            for TAG in ab_map:
-                final_results[real_barcode][TAG] = Counter()
+            for tag in ab_map:
+                final_results[real_barcode][tag] = Counter()
         for fake_barcode in true_to_false[real_barcode]:
             temp = final_results.pop(fake_barcode)
             corrected_barcodes += 1
-            for TAG in temp.keys():
-                final_results[real_barcode][TAG].update(temp[TAG])
+            for tag in temp.keys():
+                final_results[real_barcode][tag].update(temp[tag])
             temp_umi_counts = umis_per_cell.pop(fake_barcode)
             # temp_read_counts = reads_per_cell.pop(fake_barcode)
 
@@ -341,7 +324,7 @@ def correct_cells(
         umis_per_cell (Counter): Counter of umis per cell after cell barcode correction
         corrected_umis (int): How many umis have been corrected.
     """
-    print("Looking for a whitelist")
+    rprint("Looking for a whitelist")
     cell_whitelist, true_to_false = whitelist_methods.getCellWhitelist(
         cell_barcode_counts=reads_per_cell,
         expect_cells=expected_cells,
@@ -379,11 +362,11 @@ def correct_cells_whitelist(
         corrected_barcodes (int): How many umis have been corrected.
     """
     barcode_tree = pybktree.BKTree(Levenshtein.hamming, whitelist)
-    print("Generated barcode tree from whitelist")
+    rprint("Generated barcode tree from whitelist")
     cell_barcodes = list(final_results.keys())
     n_barcodes = len(cell_barcodes)
-    print("Finding reference candidates")
-    print(f"Processing {n_barcodes:,} cell barcodes")
+    rprint("Finding reference candidates")
+    rprint(f"Processing {n_barcodes:,} cell barcodes")
 
     # Run with one process
     true_to_false = find_true_to_false_map(
@@ -427,14 +410,10 @@ def find_true_to_false_map(
         if len(candidates) == 1:
             white_cell_str = candidates[0]
             true_to_false[white_cell_str].append(cell_barcode)
-        elif len(candidates) == 0:
+        else:
             # the cell doesnt match to any whitelisted barcode,
             # hence we have to drop it
             # (as it cannot be asscociated with any frequent barcode)
-            continue
-        else:
-            # more than on whitelisted candidate:
-            # we drop it as its not uniquely assignable
             continue
     return true_to_false
 
@@ -459,12 +438,12 @@ def generate_sparse_matrices(final_results, ordered_tags_map, top_cells):
         (len(ordered_tags_map), len(top_cells)), dtype=int32
     )
     for i, cell_barcode in enumerate(top_cells):
-        for _j, TAG in enumerate(final_results[cell_barcode]):
-            if final_results[cell_barcode][TAG]:
-                umi_results_matrix[ordered_tags_map[TAG], i] = len(
-                    final_results[cell_barcode][TAG]
+        for tag in final_results[cell_barcode]:
+            if final_results[cell_barcode][tag]:
+                umi_results_matrix[ordered_tags_map[tag], i] = len(
+                    final_results[cell_barcode][tag]
                 )
-                read_results_matrix[ordered_tags_map[TAG], i] = sum(
-                    final_results[cell_barcode][TAG].values()
+                read_results_matrix[ordered_tags_map[tag], i] = sum(
+                    final_results[cell_barcode][tag].values()
                 )
     return (umi_results_matrix, read_results_matrix)

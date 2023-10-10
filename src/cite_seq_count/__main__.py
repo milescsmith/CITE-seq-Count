@@ -115,7 +115,7 @@ def create_report(
     )
 def main(
     read1_path: Annotated[
-        Path,
+        list[Path],
         typer.Option(
             "-R1",
             "--read1",
@@ -124,14 +124,10 @@ def main(
                 "gz format (E.g. A1.fq.gz, B1.fq,gz, ..."
             ),
             rich_help_panel = "Inputs",
-            file_okay=True,
-            resolve_path=True,
-            dir_okay=False,
-            readable=True,
         )
     ],
     read2_path: Annotated[
-        Path,
+        list[Path],
         typer.Option(
             "-R2",
             "--read2",
@@ -140,10 +136,6 @@ def main(
                 "gz format (E.g. A2.fq.gz, B2.fq,gz, ..."
             ),
             rich_help_panel = "Inputs",
-            file_okay=True,
-            resolve_path=True,
-            dir_okay=False,
-            readable=True,
         )
     ],
     tags: Annotated[
@@ -468,7 +460,6 @@ def main(
                         barcode_slice,
                         umi_slice,
                         indexes,
-                        whitelist,
                         debug,
                         start_trim,
                         max_error,
