@@ -1,13 +1,12 @@
 import csv
 import gzip
 import sys
-import regex
-import Levenshtein
-
-from math import floor
 from collections import OrderedDict
-from itertools import combinations
-from itertools import islice
+from itertools import combinations, islice
+from math import floor
+
+import Levenshtein
+import regex
 
 
 def get_indexes(start_index, chunk_size, nth):
@@ -18,7 +17,7 @@ def get_indexes(start_index, chunk_size, nth):
         start_index (int): first position
         chunk_size (int): Chunk size
         nth (int): The nth number
-    
+
     Returns:
         list: First and last position of indexes
     """
@@ -37,7 +36,7 @@ def chunk_reads(n_reads, n):
     Returns:
         indexes (list(list)): Each entry contains the first and the last index for a read.
     """
-    indexes = list()
+    indexes = []
     if n_reads % n == 0:
         chunk_size = int(n_reads / n)
         rest = 0
@@ -67,9 +66,9 @@ def parse_whitelist_csv(filename, barcode_length, collapsing_threshold):
 
     """
     STRIP_CHARS = '"0123456789- \t\n'
-    with open(filename, mode="r") as csv_file:
+    with open(filename) as csv_file:
         csv_reader = csv.reader(csv_file)
-        cell_pattern = regex.compile(r"[ATGC]{{{}}}".format(barcode_length))
+        cell_pattern = regex.compile(fr"[ATGC]{{{barcode_length}}}")
         whitelist = [
             row[0].strip(STRIP_CHARS)
             for row in csv_reader
@@ -78,9 +77,7 @@ def parse_whitelist_csv(filename, barcode_length, collapsing_threshold):
     for cell_barcode in whitelist:
         if not cell_pattern.match(cell_barcode):
             sys.exit(
-                "This barcode {} is not only composed of ATGC bases.".format(
-                    cell_barcode
-                )
+                f"This barcode {cell_barcode} is not only composed of ATGC bases."
             )
     # collapsing_threshold=test_cell_distances(whitelist, collapsing_threshold)
     if len(whitelist) == 0:
@@ -92,10 +89,10 @@ def parse_whitelist_csv(filename, barcode_length, collapsing_threshold):
 
 def test_cell_distances(whitelist, collapsing_threshold):
     """Tests cell barcode distances to validate provided cell barcode collapsing threshold
-    
+
     Function needs the given whitelist as well as the threshold.
     If the value is too high, it will rerun until an acceptable value is found.
-    
+
     Args:
         whitelist (set): Whitelist barcode set
         collapsing_threshold (int): Value of threshold
@@ -106,9 +103,7 @@ def test_cell_distances(whitelist, collapsing_threshold):
     ok = False
     while not ok:
         print(
-            "Testing cell barcode collapsing threshold of {}".format(
-                collapsing_threshold
-            )
+            f"Testing cell barcode collapsing threshold of {collapsing_threshold}"
         )
         all_comb = combinations(whitelist, 2)
         for comb in all_comb:
@@ -118,7 +113,7 @@ def test_cell_distances(whitelist, collapsing_threshold):
                 break
         else:
             ok = True
-    print("Using {} for cell barcode collapsing threshold".format(collapsing_threshold))
+    print(f"Using {collapsing_threshold} for cell barcode collapsing threshold")
     return collapsing_threshold
 
 
@@ -138,7 +133,7 @@ def parse_tags_csv(filename):
         dict: A dictionary containing the TAGs and their names.
 
     """
-    with open(filename, mode="r") as csv_file:
+    with open(filename) as csv_file:
         csv_reader = csv.reader(csv_file)
         tags = {}
         for row in csv_reader:
@@ -152,7 +147,7 @@ def check_tags(tags, maximum_distance):
 
     Additionally, it adds the barcode to the name of the TAG circumventing the
     need of having to share the mapping of the antibody and the barcode.
-    
+
     The output will have the keys sorted by TAG length (longer first). This
     way, longer barcodes will be evaluated first.
 
@@ -182,9 +177,7 @@ def check_tags(tags, maximum_distance):
     for tag in tags:
         if not DNA_pattern.match(tag):
             print(
-                "This tag {} is not only composed of ATGC bases.\nPlease check your tags file".format(
-                    tag
-                )
+                f"This tag {tag} is not only composed of ATGC bases.\nPlease check your tags file"
             )
             sys.exit("Exiting the application.\n")
     # If offending pairs are found, print them all.
@@ -197,9 +190,7 @@ def check_tags(tags, maximum_distance):
         )
         for pair in offending_pairs:
             print(
-                "\t{tag1}\n\t{tag2}\n\tDistance = {distance}\n".format(
-                    tag1=pair[0], tag2=pair[1], distance=pair[2]
-                )
+                f"\t{pair[0]}\n\t{pair[1]}\n\tDistance = {pair[2]}\n"
             )
         sys.exit("Exiting the application.\n")
     return ordered_tags
@@ -223,9 +214,9 @@ def get_read_length(filename):
             read_length = len(sequence.rstrip())
             if temp_length != read_length:
                 sys.exit(
-                    "[ERROR] Sequence length in {} is not consistent. Please, trim all "
+                    f"[ERROR] Sequence length in {filename} is not consistent. Please, trim all "
                     "sequences at the same length.\n"
-                    "Exiting the application.\n".format(filename)
+                    "Exiting the application.\n"
                 )
     return read_length
 
@@ -260,11 +251,9 @@ def check_barcodes_lengths(read1_length, cb_first, cb_last, umi_first, umi_last)
         )
     elif barcode_umi_length < read1_length:
         print(
-            "[WARNING] Read1 length is {}bp but you are using {}bp for Cell "
+            f"[WARNING] Read1 length is {read1_length}bp but you are using {barcode_umi_length}bp for Cell "
             "and UMI barcodes combined.\nThis might lead to wrong cell "
-            "attribution and skewed umi counts.\n".format(
-                read1_length, barcode_umi_length
-            )
+            "attribution and skewed umi counts.\n"
         )
 
     return (barcode_slice, umi_slice, barcode_umi_length)
@@ -277,7 +266,7 @@ def blocks(files, size=65536):
         https://stackoverflow.com/a/9631635/9178565
 
     Args:
-        files (io.handler): A file handler 
+        files (io.handler): A file handler
         size (int): Block size
     Returns:
         A generator
@@ -306,8 +295,8 @@ def get_n_lines(file_path):
         n_lines = sum(bl.count("\n") for bl in blocks(f))
     if n_lines % 4 != 0:
         sys.exit(
-            "{}'s number of lines is not a multiple of 4. The file "
-            "might be corrupted.\n Exiting".format(file_path)
+            f"{file_path}'s number of lines is not a multiple of 4. The file "
+            "might be corrupted.\n Exiting"
         )
     return n_lines
 
@@ -328,8 +317,7 @@ def get_read_paths(read1_path, read2_path):
     _read2_path = read2_path.split(",")
     if len(_read1_path) != len(_read2_path):
         sys.exit(
-            "Unequal number of read1 ({}) and read2({}) files provided"
-            "\n Exiting".format(len(_read1_path), len(_read2_path))
+            f"Unequal number of read1 ({len(_read1_path)}) and read2({len(_read2_path)}) files provided"
+            "\n Exiting"
         )
     return (_read1_path, _read2_path)
-

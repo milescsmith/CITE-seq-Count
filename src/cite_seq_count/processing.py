@@ -1,25 +1,17 @@
-import time
 import gzip
-import sys
 import os
-import Levenshtein
-import regex
-import pybktree
-
-from collections import Counter
-from collections import defaultdict
-from multiprocess import Pool
-
+import sys
+import time
+from collections import Counter, defaultdict
 from itertools import islice
+
+import Levenshtein
+import pybktree
 from numpy import int32
 from scipy import sparse
-from umi_tools import network
-from umi_tools import umi_methods
-import umi_tools.whitelist_methods as whitelist_methods
-
+from umi_tools import network, whitelist_methods
 
 from cite_seq_count import secondsToText
-from cite_seq_count import preprocessing
 
 
 def find_best_match(TAG_seq, tags, maximum_distance):
@@ -105,7 +97,7 @@ def map_reads(
     Args:
         read1_path (string): Path to R1.fastq.gz
         read2_path (string): Path to R2.fastq.gz
-        chunk_size (int): The number of lines to process 
+        chunk_size (int): The number of lines to process
         tags (dict): A dictionary with the TAGs + TAG Names.
         barcode_slice (slice): A slice for extracting the Barcode portion from the
             sequence.
@@ -130,7 +122,6 @@ def map_reads(
     with gzip.open(read1_path, "rt") as textfile1, gzip.open(
         read2_path, "rt"
     ) as textfile2:
-
         # Read all 2nd lines from 4 line chunks. If first_n not None read only 4 times the given amount.
         secondlines = islice(
             zip(textfile1, textfile2), indexes[0] * 4 + 1, indexes[1] * 4 + 1, 4
@@ -142,10 +133,8 @@ def map_reads(
             # Progress info
             if n % 1000000 == 0:
                 print(
-                    "Processed 1,000,000 reads in {}. Total "
-                    "reads: {:,} in child {}".format(
-                        secondsToText.secondsToText(time.time() - t), n, os.getpid()
-                    )
+                    f"Processed 1,000,000 reads in {secondsToText.secondsToText(time.time() - t)}. Total "
+                    f"reads: {n:,} in child {os.getpid()}"
                 )
                 sys.stdout.flush()
                 t = time.time()
@@ -172,10 +161,10 @@ def map_reads(
 
             if debug:
                 print(
-                    "\nline:{0}\n"
-                    "cell_barcode:{1}\tUMI:{2}\tTAG_seq:{3}\n"
-                    "line length:{4}\tcell barcode length:{5}\tUMI length:{6}\tTAG sequence length:{7}\n"
-                    "Best match is: {8}".format(
+                    "\nline:{}\n"
+                    "cell_barcode:{}\tUMI:{}\tTAG_seq:{}\n"
+                    "line length:{}\tcell barcode length:{}\tUMI length:{}\tTAG sequence length:{}\n"
+                    "Best match is: {}".format(
                         read1 + read2,
                         cell_barcode,
                         UMI,
@@ -190,7 +179,7 @@ def map_reads(
                 sys.stdout.flush()
             n += 1
     print(
-        "Mapping done for process {}. Processed {:,} reads".format(os.getpid(), n - 1)
+        f"Mapping done for process {os.getpid()}. Processed {n - 1:,} reads"
     )
     sys.stdout.flush()
     return (results, no_match)
@@ -234,13 +223,13 @@ def merge_results(parallel_results):
 def correct_umis(final_results, collapsing_threshold, top_cells, max_umis):
     """
     Corrects umi barcodes within same cell/tag groups.
-    
+
     Args:
         final_results (dict): Dict of dict of Counters with mapping results.
         collapsing_threshold (int): Max distance between umis.
         top_cells (set): Set of cells to go through.
         max_umis (int): Maximum UMIs to consider for one cluster.
-    
+
     Returns:
         final_results (dict): Same as input but with corrected umis.
         corrected_umis (int): How many umis have been corrected.
@@ -339,14 +328,14 @@ def correct_cells(
 ):
     """
     Corrects cell barcodes.
-    
+
     Args:
         final_results (dict): Dict of dict of Counters with mapping results.
         umis_per_cell (Counter): Counter of number of umis per cell.
         collapsing_threshold (int): Max distance between umis.
         expected_cells (int): Number of expected cells.
         ab_map (dict): Dict of the TAGS.
-    
+
     Returns:
         final_results (dict): Same as input but with corrected umis.
         umis_per_cell (Counter): Counter of umis per cell after cell barcode correction
@@ -375,7 +364,7 @@ def correct_cells_whitelist(
 ):
     """
     Corrects cell barcodes.
-    
+
     Args:
         final_results (dict): Dict of dict of Counters with mapping results.
         umis_per_cell (Counter): Counter of UMIs per cell.
@@ -383,7 +372,7 @@ def correct_cells_whitelist(
         collapsing_threshold (int): Max distance between umis.
         ab_map (OrederedDict): Tags in an ordered dict.
 
-    
+
     Returns:
         final_results (dict): Same as input but with corrected umis.
         umis_per_cell (Counter): Updated UMI counts after correction.
@@ -394,7 +383,7 @@ def correct_cells_whitelist(
     cell_barcodes = list(final_results.keys())
     n_barcodes = len(cell_barcodes)
     print("Finding reference candidates")
-    print("Processing {:,} cell barcodes".format(n_barcodes))
+    print(f"Processing {n_barcodes:,} cell barcodes")
 
     # Run with one process
     true_to_false = find_true_to_false_map(
@@ -425,7 +414,7 @@ def find_true_to_false_map(
         true_to_false (defaultdict(list)): Contains the mapping between the fake and real barcodes. The key is the real one.
     """
     true_to_false = defaultdict(list)
-    for i, cell_barcode in enumerate(cell_barcodes):
+    for _i, cell_barcode in enumerate(cell_barcodes):
         if cell_barcode in whitelist:
             # if the barcode is already whitelisted, no need to add
             continue
@@ -470,7 +459,7 @@ def generate_sparse_matrices(final_results, ordered_tags_map, top_cells):
         (len(ordered_tags_map), len(top_cells)), dtype=int32
     )
     for i, cell_barcode in enumerate(top_cells):
-        for j, TAG in enumerate(final_results[cell_barcode]):
+        for _j, TAG in enumerate(final_results[cell_barcode]):
             if final_results[cell_barcode][TAG]:
                 umi_results_matrix[ordered_tags_map[TAG], i] = len(
                     final_results[cell_barcode][TAG]
@@ -479,4 +468,3 @@ def generate_sparse_matrices(final_results, ordered_tags_map, top_cells):
                     final_results[cell_barcode][TAG].values()
                 )
     return (umi_results_matrix, read_results_matrix)
-

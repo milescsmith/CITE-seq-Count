@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.5.0] - 10.10.2023
+
+### Fixed
+  - Updated to work with newer versions of Pandas
+
+
 ## [1.4.4] - 10.12.2020
 ### Changed
   - Hotfix linked to the issues like #125 showing that python3.8 and above crash on modified loop.
