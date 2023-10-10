@@ -1,7 +1,12 @@
 # Gist found here: https://gist.github.com/Highstaker/280a09591df4a5fb1363b0bbaf858f0d
 
 
-def pluralizeRussian(number, nom_sing, gen_sing, gen_pl):
+def pluralizeRussian(
+    number: float,
+    nom_sing: str,
+    gen_sing: str,
+    gen_pl: str
+    ) -> str:
     """
     Changes the hours, minutes, seconds to plural
     """
@@ -21,7 +26,7 @@ def pluralizeRussian(number, nom_sing, gen_sing, gen_pl):
         return gen_pl
 
 
-def secondsToText(secs, lang="EN"):
+def secondsToText(secs: float, lang: str = "EN") -> str:
     """
     Converts datetime to human readable hours, minutes, secondes format.
 
@@ -38,15 +43,15 @@ def secondsToText(secs, lang="EN"):
     seconds = secs - days * 86400 - hours * 3600 - minutes * 60
 
     if lang == "ES":
-        days_text = "día{}".format("s" if days != 1 else "")
-        hours_text = "hora{}".format("s" if hours != 1 else "")
-        minutes_text = "minuto{}".format("s" if minutes != 1 else "")
-        seconds_text = "segundo{}".format("s" if seconds != 1 else "")
+        days_text = f'día{"s" if days != 1 else ""}'
+        hours_text = f'hora{"s" if hours != 1 else ""}'
+        minutes_text = f'minuto{"s" if minutes != 1 else ""}'
+        seconds_text = f'segundo{"s" if seconds != 1 else ""}'
     elif lang == "DE":
-        days_text = "Tag{}".format("e" if days != 1 else "")
-        hours_text = "Stunde{}".format("n" if hours != 1 else "")
-        minutes_text = "Minute{}".format("n" if minutes != 1 else "")
-        seconds_text = "Sekunde{}".format("n" if seconds != 1 else "")
+        days_text = f'Tag{"e" if days != 1 else ""}'
+        hours_text = f'Stunde{"n" if hours != 1 else ""}'
+        minutes_text = f'Minute{"n" if minutes != 1 else ""}'
+        seconds_text = f'Sekunde{"n" if seconds != 1 else ""}'
     elif lang == "RU":
         days_text = pluralizeRussian(days, "день", "дня", "дней")
         hours_text = pluralizeRussian(hours, "час", "часа", "часов")
@@ -54,12 +59,12 @@ def secondsToText(secs, lang="EN"):
         seconds_text = pluralizeRussian(seconds, "секунда", "секунды", "секунд")
     else:
         # Default to English
-        days_text = "day{}".format("s" if days != 1 else "")
-        hours_text = "hour{}".format("s" if hours != 1 else "")
-        minutes_text = "minute{}".format("s" if minutes != 1 else "")
-        seconds_text = "second{}".format("s" if seconds != 1 else "")
+        days_text = f'day{"s" if days != 1 else ""}'
+        hours_text = f'hour{"s" if hours != 1 else ""}'
+        minutes_text = f'minute{"s" if minutes != 1 else ""}'
+        seconds_text = f'second{"s" if seconds != 1 else ""}'
 
-    result = ", ".join(
+    return ", ".join(
         filter(
             lambda x: bool(x),
             [
@@ -70,4 +75,3 @@ def secondsToText(secs, lang="EN"):
             ],
         )
     )
-    return result

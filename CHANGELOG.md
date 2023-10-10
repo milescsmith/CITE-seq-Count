@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.5.1] - 10.10.2023
+
+### Fixed
+  - More updates to make sure Path objects are used consistently
+
 ## [1.5.0] - 10.10.2023
 
 ### Fixed

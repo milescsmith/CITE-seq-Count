@@ -12,9 +12,9 @@ def write_to_files(
     sparse_matrix,
     top_cells: set[str],
     ordered_tags_map: dict[str, int],
-    data_type: str, # should probably be an enum
-    outfolder: Path
-    ) -> None:
+    data_type: str,  # should probably be an enum
+    outfolder: Path,
+) -> None:
     """Write the umi and read sparse matrices to file in gzipped mtx format.
 
     Args:
@@ -24,7 +24,7 @@ def write_to_files(
         data_type (string): A string definning if the data is umi or read based.
         outfolder (string): Path to the output folder.
     """
-    prefix = Path(outfolder).joinpath(f"{data_type}_count")
+    prefix = outfolder.joinpath(f"{data_type}_count")
     if not prefix.exists():
         prefix.mkdir(exist_ok=True)
     io.mmwrite(prefix.joinpath("matrix.mtx"), sparse_matrix)
@@ -44,13 +44,7 @@ def write_to_files(
     prefix.joinpath("matrix.mtx").unlink()
 
 
-def write_dense(
-    sparse_matrix,
-    index: list[str],
-    columns: tuple[str],
-    outfolder: Path,
-    filename: Path
-    ) -> None:
+def write_dense(sparse_matrix, index: list[str], columns: tuple[str], outfolder: Path, filename: Path) -> None:
     """
     Writes a dense matrix in a csv format
 
@@ -62,23 +56,11 @@ def write_dense(
        filename (str): Filename
     """
     outfolder = Path(outfolder).mkdir(exist_ok=True)
-    pandas_dense = pd.DataFrame(
-        data=sparse_matrix.todense(),
-        columns=tuple(columns),
-        index=tuple(index)
-        )
-    pandas_dense.to_csv(
-        path_or_buf=outfolder.joinpath(filename),
-        sep="\t"
-        )
+    pandas_dense = pd.DataFrame(data=sparse_matrix.todense(), columns=tuple(columns), index=tuple(index))
+    pandas_dense.to_csv(path_or_buf=outfolder.joinpath(filename), sep="\t")
 
 
-def write_unmapped(
-    merged_no_match: Counter,
-    top_unknowns: int,
-    outfolder: Path,
-    filename: Path
-    ) -> None:
+def write_unmapped(merged_no_match: Counter, top_unknowns: int, outfolder: Path, filename: Path) -> None:
     """
     Writes a list of top unmapped sequences
 

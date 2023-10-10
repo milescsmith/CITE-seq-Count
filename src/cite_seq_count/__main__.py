@@ -3,7 +3,6 @@
 Author: Patrick Roelli
 """
 import datetime
-import os
 import sys
 import time
 from collections import Counter, OrderedDict, defaultdict
@@ -12,7 +11,6 @@ from collections import Counter, OrderedDict, defaultdict
 from pathlib import Path
 from typing import Annotated, Optional
 
-import better_exceptions
 import typer
 from dateutil import tz
 from loguru import logger
@@ -31,35 +29,34 @@ from cite_seq_count import (
 )
 from cite_seq_count.logger import init_logger
 
-better_exceptions.hook()
-
 logger.remove()
 
-NUM_CPUS=cpu_count()
+NUM_CPUS = cpu_count()
 DEFAULT_RESULTS_OUTPUT = Path().cwd().joinpath("Results")
 DEFAULT_UNMAPPED_OUTPUT = Path().cwd().joinpath("unmapped.csv")
 DEFAULT_MULTIPROCESSING_THRESHOLD = 1000001
 
+
 def create_report(
     outfolder: Path,
-    n_reads,
-    reads_per_cell,
-    no_match,
-    start_time,
-    umis_corrected,
-    bcs_corrected,
-    bad_cells,
-    bc_threshold,
-    umi_threshold,
-    read1_path,
-    read2_path,
-    cb_first,
-    cb_last,
-    umi_first,
-    umi_last,
-    expected_cells,
-    max_error,
-    start_trim,
+    n_reads: int,
+    reads_per_cell: Counter[str],
+    no_match: Counter[str],
+    start_time: float,
+    umis_corrected: int,
+    bcs_corrected: int,
+    bad_cells: set[str],
+    bc_threshold: int,
+    umi_threshold: int,
+    read1_path: list[Path],
+    read2_path: list[Path],
+    cb_first: int,
+    cb_last: int,
+    umi_first: int,
+    umi_last: int,
+    expected_cells: int,
+    max_error: int,
+    start_trim: int,
 ) -> None:
     """
     Creates a report with details about the run in a yaml format.
@@ -112,7 +109,7 @@ def create_report(
     # name="count",
     no_args_is_help=True,
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
-    )
+)
 def main(
     read1_path: Annotated[
         list[Path],
@@ -123,8 +120,8 @@ def main(
                 "The path of Read1 in gz format, or a comma-separated list of paths to all Read1 files in "
                 "gz format (E.g. A1.fq.gz, B1.fq,gz, ..."
             ),
-            rich_help_panel = "Inputs",
-        )
+            rich_help_panel="Inputs",
+        ),
     ],
     read2_path: Annotated[
         list[Path],
@@ -135,8 +132,8 @@ def main(
                 "The path of Read2 in gz format, or a comma-separated list of paths to all Read2 files in "
                 "gz format (E.g. A2.fq.gz, B2.fq,gz, ..."
             ),
-            rich_help_panel = "Inputs",
-        )
+            rich_help_panel="Inputs",
+        ),
     ],
     tags: Annotated[
         Path,
@@ -150,22 +147,21 @@ def main(
                 "\tATGCGA,First_tag_name"
                 "\n\n\tGTCATG,Second_tag_name"
             ),
-            rich_help_panel = "Inputs",
+            rich_help_panel="Inputs",
             file_okay=True,
             resolve_path=True,
             dir_okay=False,
             readable=True,
-        )
+        ),
     ],
-
     cb_first: Annotated[
         int,
         typer.Option(
             "-cbf",
             "--cell_barcode_first_base",
             help="Postion of the first base of your cell barcodes.",
-            rich_help_panel = "Barcodes",
-        )
+            rich_help_panel="Barcodes",
+        ),
     ],
     cb_last: Annotated[
         int,
@@ -173,8 +169,8 @@ def main(
             "-cbl",
             "--cell_barcode_last_base",
             help=("Postion of the last base of your cell barcodes."),
-            rich_help_panel = "Barcodes",
-        )
+            rich_help_panel="Barcodes",
+        ),
     ],
     umi_first: Annotated[
         int,
@@ -182,8 +178,8 @@ def main(
             "-umif",
             "--umi_first_base",
             help="Postion of the first base of your UMI.",
-            rich_help_panel = "Barcodes",
-        )
+            rich_help_panel="Barcodes",
+        ),
     ],
     umi_last: Annotated[
         int,
@@ -191,40 +187,39 @@ def main(
             "-umil",
             "--umi_last_base",
             help="Postion of the last base of your UMI.",
-            rich_help_panel = "Barcodes",
-        )
+            rich_help_panel="Barcodes",
+        ),
     ],
     umi_threshold: Annotated[
         int,
         typer.Option(
             "--umi_collapsing_dist",
             help="threshold for umi collapsing.",
-            rich_help_panel = "Barcodes",
-        )
+            rich_help_panel="Barcodes",
+        ),
     ] = 2,
     bc_threshold: Annotated[
         int,
         typer.Option(
             "--bc_collapsing_dist",
             help="threshold for cellular barcode collapsing.",
-            rich_help_panel = "Barcodes",
-        )
+            rich_help_panel="Barcodes",
+        ),
     ] = 1,
     # cells = parser.add_argument_group(
     #     "Cells", description=("Expected number of cells and potential whitelist")
     # ),
-
     expected_cells: Annotated[
         int,
         typer.Option(
             "-cells",
             "--expected_cells",
             help=("Number of expected cells from your run."),
-            rich_help_panel = "Cells",
-        )
+            rich_help_panel="Cells",
+        ),
     ] = 0,
-    whitelist: Annotated[
-        Optional[Path], # noqa UP007
+    whitelist_file: Annotated[
+        Optional[Path],  # noqa UP007
         typer.Option(
             "-wl",
             "--whitelist",
@@ -240,14 +235,13 @@ def main(
                 "\t  GCTAGTCAGGAT-1\n\n"
                 "\t  CGACTGCTAACG-1\n"
             ),
-            rich_help_panel = "Cells",
+            rich_help_panel="Cells",
             file_okay=True,
             resolve_path=True,
             dir_okay=False,
             readable=True,
-        )
+        ),
     ] = None,
-
     # FILTERS group.
     # filters = parser.add_argument_group(
     #     "TAG filters", description=("Filtering and trimming for read2.")
@@ -257,8 +251,8 @@ def main(
         typer.Option(
             "--max-errors",
             help=("Maximum Levenshtein distance allowed for antibody barcodes."),
-            rich_help_panel = "Filters",
-        )
+            rich_help_panel="Filters",
+        ),
     ] = 2,
     start_trim: Annotated[
         int,
@@ -266,8 +260,8 @@ def main(
             "-trim",
             "--start-trim",
             help=("Number of bases to discard from read2."),
-            rich_help_panel = "Filters",
-        )
+            rich_help_panel="Filters",
+        ),
     ] = 0,
     # Remaining arguments.
     n_threads: Annotated[
@@ -276,15 +270,15 @@ def main(
             "-T",
             "--threads",
             help="How many threads are to be used for running the program",
-        )
+        ),
     ] = NUM_CPUS,
     first_n: Annotated[
-        Optional[int], # noqa UP007
+        Optional[int],  # noqa UP007
         typer.Option(
             "-n",
             "--first_n",
             help="Select N reads to run on instead of all.",
-        )
+        ),
     ] = None,
     outfolder: Annotated[
         Path,
@@ -292,7 +286,7 @@ def main(
             "-o",
             "--output",
             help="Results will be written to this folder",
-        )
+        ),
     ] = DEFAULT_RESULTS_OUTPUT,
     unmapped_file: Annotated[
         Path,
@@ -300,7 +294,7 @@ def main(
             "-u",
             "--unmapped-tags",
             help="Write table of unknown TAGs to file.",
-        )
+        ),
     ] = DEFAULT_UNMAPPED_OUTPUT,
     unknowns_top: Annotated[
         int,
@@ -308,7 +302,7 @@ def main(
             "-ut",
             "--unknown-top-tags",
             help="Top n unmapped TAGs.",
-        )
+        ),
     ] = 100,
     *,
     no_umi_correction: Annotated[
@@ -316,38 +310,32 @@ def main(
         typer.Option(
             "--no_umi_correction",
             help="Deactivate UMI collapsing",
-            rich_help_panel = "Barcodes",
-        )
+            rich_help_panel="Barcodes",
+        ),
     ] = False,
     sliding_window: Annotated[
         bool,
         typer.Option(
             "--sliding-window",
             help=("Allow for a sliding window when aligning."),
-            rich_help_panel = "Filters",
-        )
+            rich_help_panel="Filters",
+        ),
     ] = False,
     dense: Annotated[
         bool,
         typer.Option(
             "--dense",
             help="Add a dense output to the results folder",
-        )
+        ),
     ] = False,
-    debug: Annotated[
-        bool,
-        typer.Option(
-            "--debug",
-            help="Print extra information for debugging."
-        )
-    ] = False,
-    version: Annotated[ # noqa ARG001
+    debug: Annotated[bool, typer.Option("--debug", help="Print extra information for debugging.")] = False,
+    version: Annotated[  # noqa ARG001
         bool,
         typer.Option(
             "--version",
             callback=version_callback,
             help="Print version number.",
-        )
+        ),
     ] = False,
 ) -> None:
     # Create logger and stream handler
@@ -355,25 +343,22 @@ def main(
 
     start_time = time.time()
 
-
-    if whitelist:
+    if whitelist_file:
         rprint("Loading whitelist")
         (whitelist, bc_threshold) = preprocessing.parse_whitelist_csv(
-            filename=whitelist,
+            filename=whitelist_file,
             barcode_length=cb_last - cb_first + 1,
             collapsing_threshold=bc_threshold,
         )
     else:
-        whitelist = False
+        whitelist_file = None
 
     # Load TAGs/ABs.
     ab_map = preprocessing.parse_tags_csv(tags)
     ab_map = preprocessing.check_tags(ab_map, max_error)
 
     # Identify input file(s)
-    read1_paths, read2_paths = preprocessing.get_read_paths(
-        read1_path, read2_path
-    )
+    read1_paths, read2_paths = preprocessing.get_read_paths(read1_path, read2_path)
 
     # preprocessing and processing occur in separate loops so the program can crash earlier if
     # one of the inputs is not valid.
@@ -440,9 +425,7 @@ def main(
             _reads_per_cell = Counter()
             for cell_barcode, counts in _final_results.items():
                 _umis_per_cell[cell_barcode] = sum(len(counts[UMI]) for UMI in counts)
-                _reads_per_cell[cell_barcode] = sum(
-                    sum(counts[UMI].values()) for UMI in counts
-                )
+                _reads_per_cell[cell_barcode] = sum(sum(counts[UMI].values()) for UMI in counts)
         else:
             # Run with multiple processes
             rprint(f"CITE-seq-Count is running with {n_threads} cores.")
@@ -489,9 +472,7 @@ def main(
             for tag in _final_results[cell_barcode]:
                 if tag in final_results[cell_barcode]:
                     # Counter + Counter = Counter
-                    final_results[cell_barcode][tag] += _final_results[cell_barcode][
-                        tag
-                    ]
+                    final_results[cell_barcode][tag] += _final_results[cell_barcode][tag]
                 else:
                     # Explicitly save the counter to that tag
                     final_results[cell_barcode][tag] = _final_results[cell_barcode][tag]
@@ -586,8 +567,8 @@ def main(
         sparse_matrix=umi_aberrant_matrix,
         index=list(ordered_tags_map.keys()),
         columns=aberrant_cells,
-        outfolder=os.path.join(outfolder, "uncorrected_cells"),
-        filename="dense_umis.tsv",
+        outfolder=outfolder.joinpath("uncorrected_cells"),
+        filename=outfolder.joinpath("dense_umis.tsv"),
     )
 
     # Create sparse matrices for results
@@ -652,7 +633,7 @@ def main(
         io.write_dense(
             sparse_matrix=umi_results_matrix,
             index=list(ordered_tags_map.keys()),
-            columns=top_cells,
+            columns=tuple(top_cells),
             outfolder=outfolder,
-            filename="dense_umis.tsv",
+            filename=outfolder.joinpath("dense_umis.tsv"),
         )

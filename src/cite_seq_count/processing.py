@@ -10,6 +10,7 @@ import pybktree
 from numpy import int32
 from rich import print as rprint
 from scipy import sparse
+from tqdm.rich import tqdm
 from umi_tools import network, whitelist_methods
 
 from cite_seq_count import secondsToText
@@ -115,13 +116,9 @@ def map_reads(
     no_match = Counter()
     n = 1
     t = time.time()
-    with (gzip.open(read1_path, "rt") as textfile1, gzip.open(
-            read2_path, "rt"
-        ) as textfile2):
+    with gzip.open(read1_path, "rt") as textfile1, gzip.open(read2_path, "rt") as textfile2:
         # Read all 2nd lines from 4 line chunks. If first_n not None read only 4 times the given amount.
-        secondlines = islice(
-            zip(textfile1, textfile2, strict=True), indexes[0] * 4 + 1, indexes[1] * 4 + 1, 4
-        )
+        secondlines = islice(zip(textfile1, textfile2, strict=True), indexes[0] * 4 + 1, indexes[1] * 4 + 1, 4)
         for read1, read2 in secondlines:
             read1 = read1.strip()
             read2 = read2.strip()
@@ -161,9 +158,7 @@ def map_reads(
                 )
                 sys.stdout.flush()
             n += 1
-    rprint(
-        f"Mapping done for process {os.getpid()}. Processed {n - 1:,} reads"
-    )
+    rprint(f"Mapping done for process {os.getpid()}. Processed {n - 1:,} reads")
     sys.stdout.flush()
     return (results, no_match)
 
@@ -194,9 +189,7 @@ def merge_results(parallel_results):
                 # Test the counter. Returns false if empty
                 if mapped[cell_barcode][tag]:
                     for umi in mapped[cell_barcode][tag]:
-                        merged_results[cell_barcode][tag][umi] += mapped[cell_barcode][
-                            tag
-                        ][umi]
+                        merged_results[cell_barcode][tag][umi] += mapped[cell_barcode][tag][umi]
                         umis_per_cell[cell_barcode] += len(mapped[cell_barcode][tag])
                         reads_per_cell[cell_barcode] += mapped[cell_barcode][tag][umi]
         merged_no_match |= unmapped
@@ -226,12 +219,8 @@ def correct_umis(final_results, collapsing_threshold, top_cells, max_umis):
             n_umis = len(final_results[cell_barcode][tag])
             if n_umis > 1 and n_umis <= max_umis:
                 umi_clusters = network.UMIClusterer()
-                umiclusters = umi_clusters(
-                    final_results[cell_barcode][tag], collapsing_threshold
-                )
-                (new_res, temp_corrected_umis) = update_umi_counts(
-                    umiclusters, final_results[cell_barcode][tag]
-                )
+                umiclusters = umi_clusters(final_results[cell_barcode][tag], collapsing_threshold)
+                (new_res, temp_corrected_umis) = update_umi_counts(umiclusters, final_results[cell_barcode][tag])
                 final_results[cell_barcode][tag] = new_res
                 corrected_umis += temp_corrected_umis
             elif n_umis > max_umis:
@@ -252,9 +241,7 @@ def update_umi_counts(UMIclusters, cell_tag_counts):
         temp_corrected_umis (int): Number of corrected umis
     """
     temp_corrected_umis = 0
-    for (
-        umi_cluster
-    ) in UMIclusters:  # This is a list with the first element the dominant barcode
+    for umi_cluster in UMIclusters:  # This is a list with the first element the dominant barcode
         if len(umi_cluster) > 1:  # This means we got a correction
             major_umi = umi_cluster[0]
             for minor_umi in umi_cluster[1:]:
@@ -342,9 +329,7 @@ def correct_cells(
     return (final_results, umis_per_cell, corrected_barcodes)
 
 
-def correct_cells_whitelist(
-    final_results, umis_per_cell, whitelist, collapsing_threshold, ab_map
-):
+def correct_cells_whitelist(final_results, umis_per_cell, whitelist, collapsing_threshold, ab_map):
     """
     Corrects cell barcodes.
 
@@ -381,9 +366,7 @@ def correct_cells_whitelist(
     return (final_results, umis_per_cell, corrected_barcodes)
 
 
-def find_true_to_false_map(
-    barcode_tree, cell_barcodes, whitelist, collapsing_threshold
-):
+def find_true_to_false_map(barcode_tree, cell_barcodes, whitelist, collapsing_threshold):
     """
     Creates a mapping between "fake" cell barcodes and their original true barcode.
 
@@ -397,16 +380,12 @@ def find_true_to_false_map(
         true_to_false (defaultdict(list)): Contains the mapping between the fake and real barcodes. The key is the real one.
     """
     true_to_false = defaultdict(list)
-    for _i, cell_barcode in enumerate(cell_barcodes):
+    for cell_barcode in tqdm(cell_barcodes):
         if cell_barcode in whitelist:
             # if the barcode is already whitelisted, no need to add
             continue
         # get all members of whitelist that are at distance of collapsing_threshold
-        candidates = [
-            white_cell
-            for d, white_cell in barcode_tree.find(cell_barcode, collapsing_threshold)
-            if d > 0
-        ]
+        candidates = [white_cell for d, white_cell in barcode_tree.find(cell_barcode, collapsing_threshold) if d > 0]
         if len(candidates) == 1:
             white_cell_str = candidates[0]
             true_to_false[white_cell_str].append(cell_barcode)
@@ -431,19 +410,11 @@ def generate_sparse_matrices(final_results, ordered_tags_map, top_cells):
         read_results_matrix (scipy.sparse.dok_matrix): Read counts
 
     """
-    umi_results_matrix = sparse.dok_matrix(
-        (len(ordered_tags_map), len(top_cells)), dtype=int32
-    )
-    read_results_matrix = sparse.dok_matrix(
-        (len(ordered_tags_map), len(top_cells)), dtype=int32
-    )
+    umi_results_matrix = sparse.dok_matrix((len(ordered_tags_map), len(top_cells)), dtype=int32)
+    read_results_matrix = sparse.dok_matrix((len(ordered_tags_map), len(top_cells)), dtype=int32)
     for i, cell_barcode in enumerate(top_cells):
         for tag in final_results[cell_barcode]:
             if final_results[cell_barcode][tag]:
-                umi_results_matrix[ordered_tags_map[tag], i] = len(
-                    final_results[cell_barcode][tag]
-                )
-                read_results_matrix[ordered_tags_map[tag], i] = sum(
-                    final_results[cell_barcode][tag].values()
-                )
+                umi_results_matrix[ordered_tags_map[tag], i] = len(final_results[cell_barcode][tag])
+                read_results_matrix[ordered_tags_map[tag], i] = sum(final_results[cell_barcode][tag].values())
     return (umi_results_matrix, read_results_matrix)
