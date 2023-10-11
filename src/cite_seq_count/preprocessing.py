@@ -19,7 +19,7 @@ STRIP_CHARS = '"0123456789- \t\n'
 gzopen = partial(gzip.open, mode="rt")
 
 
-def get_indexes(start_index: int, chunk_size: int, nth: int) -> tuple[int, int]:
+def get_indexes(start_index: int, chunk_size: int, nth: int) -> list[int]:
     """
     Creates indexes from a reference index, a chunk size an nth number
 
@@ -33,7 +33,7 @@ def get_indexes(start_index: int, chunk_size: int, nth: int) -> tuple[int, int]:
     """
     start_index = nth * chunk_size
     stop_index = chunk_size + nth * chunk_size
-    return start_index, stop_index
+    return [start_index, stop_index]
 
 
 def chunk_reads(n_reads: int, n: int) -> list[list[int]]:
