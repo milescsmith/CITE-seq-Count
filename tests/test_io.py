@@ -1,10 +1,12 @@
+from pathlib import Path
+
 import pytest
 
 from cite_seq_count import io
 
 
 @pytest.fixture
-def data():
+def data() -> None:
     from collections import OrderedDict
 
     from scipy import sparse
@@ -19,17 +21,19 @@ def data():
         "unmapped": 4
         })
     pytest.data_type = "umi"
-    pytest.outfolder = "tests/test_data/"
+    pytest.outfolder = Path("tests/test_data/")
 
-def test_write_to_files(data, tmpdir):
+def test_write_to_files(data, tmp_path) -> None:
     import gzip
 
     import scipy
-    io.write_to_files(pytest.sparse_matrix,
-        pytest.top_cells,
-        pytest.ordered_tags_map,
-        pytest.data_type,
-        tmpdir)
-    file = tmpdir.join("umi_count/matrix.mtx.gz")
+    io.write_to_files(
+        sparse_matrix=pytest.sparse_matrix,
+        top_cells=pytest.top_cells,
+        ordered_tags_map=pytest.ordered_tags_map,
+        data_type=pytest.data_type,
+        outfolder=tmp_path
+        )
+    file = tmp_path.joinpath("umi_count/matrix.mtx.gz")
     with gzip.open(file, "rb") as mtx_file:
-        assert isinstance(scipy.io.mmread(mtx_file) ,scipy.sparse.coo.coo_matrix)
+        assert isinstance(scipy.io.mmread(mtx_file) ,scipy.sparse.coo_matrix)

@@ -11,12 +11,21 @@ from collections import Counter, OrderedDict, defaultdict
 from pathlib import Path
 from typing import Annotated, Optional
 
+# from tqdm.auto import tqdm
+import better_exceptions
 import typer
 from dateutil import tz
 from loguru import logger
 from multiprocess import Pool, cpu_count
 from rich import print as rprint
+from rich.traceback import install
 from tqdm.rich import tqdm
+
+# import cite_seq_count
+# install(suppress=[cite_seq_count])
+install()
+
+better_exceptions.hook()
 
 from cite_seq_count import (
     __version__,
@@ -121,7 +130,7 @@ def main(
                 "The path of Read1 in gz format, or a comma-separated list of paths to all Read1 files in "
                 "gz format (E.g. A1.fq.gz, B1.fq,gz, ..."
             ),
-            rich_help_panel="Inputs",
+            # rich_help_panel="Inputs",
         ),
     ],
     read2_path: Annotated[
@@ -133,7 +142,7 @@ def main(
                 "The path of Read2 in gz format, or a comma-separated list of paths to all Read2 files in "
                 "gz format (E.g. A2.fq.gz, B2.fq,gz, ..."
             ),
-            rich_help_panel="Inputs",
+            # rich_help_panel="Inputs",
         ),
     ],
     tags: Annotated[
@@ -148,7 +157,7 @@ def main(
                 "\tATGCGA,First_tag_name"
                 "\n\n\tGTCATG,Second_tag_name"
             ),
-            rich_help_panel="Inputs",
+            # rich_help_panel="Inputs",
             file_okay=True,
             resolve_path=True,
             dir_okay=False,
@@ -161,7 +170,7 @@ def main(
             "-cbf",
             "--cell_barcode_first_base",
             help="Postion of the first base of your cell barcodes.",
-            rich_help_panel="Barcodes",
+            # rich_help_panel="Barcodes",
         ),
     ],
     cb_last: Annotated[
@@ -170,7 +179,7 @@ def main(
             "-cbl",
             "--cell_barcode_last_base",
             help=("Postion of the last base of your cell barcodes."),
-            rich_help_panel="Barcodes",
+            # rich_help_panel="Barcodes",
         ),
     ],
     umi_first: Annotated[
@@ -179,7 +188,7 @@ def main(
             "-umif",
             "--umi_first_base",
             help="Postion of the first base of your UMI.",
-            rich_help_panel="Barcodes",
+            # rich_help_panel="Barcodes",
         ),
     ],
     umi_last: Annotated[
@@ -188,7 +197,7 @@ def main(
             "-umil",
             "--umi_last_base",
             help="Postion of the last base of your UMI.",
-            rich_help_panel="Barcodes",
+            # rich_help_panel="Barcodes",
         ),
     ],
     umi_threshold: Annotated[
@@ -196,7 +205,7 @@ def main(
         typer.Option(
             "--umi_collapsing_dist",
             help="threshold for umi collapsing.",
-            rich_help_panel="Barcodes",
+            # rich_help_panel="Barcodes",
         ),
     ] = 2,
     bc_threshold: Annotated[
@@ -204,7 +213,7 @@ def main(
         typer.Option(
             "--bc_collapsing_dist",
             help="threshold for cellular barcode collapsing.",
-            rich_help_panel="Barcodes",
+            # rich_help_panel="Barcodes",
         ),
     ] = 1,
     # cells = parser.add_argument_group(
@@ -216,7 +225,7 @@ def main(
             "-cells",
             "--expected_cells",
             help=("Number of expected cells from your run."),
-            rich_help_panel="Cells",
+            # rich_help_panel="Cells",
         ),
     ] = 0,
     whitelist_file: Annotated[
@@ -236,7 +245,7 @@ def main(
                 "\t  GCTAGTCAGGAT-1\n\n"
                 "\t  CGACTGCTAACG-1\n"
             ),
-            rich_help_panel="Cells",
+            # rich_help_panel="Cells",
             file_okay=True,
             resolve_path=True,
             dir_okay=False,
@@ -252,7 +261,7 @@ def main(
         typer.Option(
             "--max-errors",
             help=("Maximum Levenshtein distance allowed for antibody barcodes."),
-            rich_help_panel="Filters",
+            # rich_help_panel="Filters",
         ),
     ] = 2,
     start_trim: Annotated[
@@ -261,7 +270,7 @@ def main(
             "-trim",
             "--start-trim",
             help=("Number of bases to discard from read2."),
-            rich_help_panel="Filters",
+            # rich_help_panel="Filters",
         ),
     ] = 0,
     # Remaining arguments.
@@ -311,7 +320,7 @@ def main(
         typer.Option(
             "--no_umi_correction",
             help="Deactivate UMI collapsing",
-            rich_help_panel="Barcodes",
+            # rich_help_panel="Barcodes",
         ),
     ] = False,
     sliding_window: Annotated[
@@ -319,7 +328,7 @@ def main(
         typer.Option(
             "--sliding-window",
             help=("Allow for a sliding window when aligning."),
-            rich_help_panel="Filters",
+            # rich_help_panel="Filters",
         ),
     ] = False,
     dense: Annotated[
@@ -414,8 +423,7 @@ def main(
                 tags=ab_map,
                 barcode_slice=barcode_slice,
                 umi_slice=umi_slice,
-                indexes=[0, n_reads],
-                whitelist=whitelist,
+                indexes=(0, n_reads),
                 debug=debug,
                 start_trim=start_trim,
                 maximum_distance=max_error,
@@ -557,8 +565,8 @@ def main(
         top_cells.remove(cell_barcode)
 
     # Create sparse aberrant cells matrix
-    # (umi_aberrant_matrix, read_aberrant_matrix) = processing.generate_sparse_matrices(
-    umi_aberrant_matrix = processing.generate_sparse_matrices(
+    (umi_aberrant_matrix, read_aberrant_matrix) = processing.generate_sparse_matrices(
+        # umi_aberrant_matrix = processing.generate_sparse_matrices(
         final_results=final_results,
         ordered_tags_map=ordered_tags_map,
         top_cells=aberrant_cells,

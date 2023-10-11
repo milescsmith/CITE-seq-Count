@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "CITE-seq-Count"
-version = "1.5.4"
+version = "1.5.5"
 description = "A python package to map reads from CITE-seq or hashing data for single cell experiments"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -23,6 +23,7 @@ dependencies = [
     "typer ==0.9.0",
     "rich ==13.6.0",
     "loguru ==0.7.2",
+    "tqdm ==4.66.1",
 ]
 
 [[project.authors]]

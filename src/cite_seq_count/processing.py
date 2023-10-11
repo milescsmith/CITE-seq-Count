@@ -401,8 +401,8 @@ def find_true_to_false_map(barcode_tree, cell_barcodes, whitelist, collapsing_th
 def generate_sparse_matrices(
     final_results: defaultdict[str, defaultdict[str, Counter[str]]],
     ordered_tags_map: dict[str, int],
-    top_cells: set[str]
-    ) -> tuple[sparse.dok_matrix, sparse.dok_matrix]:
+    top_cells: set[str],
+) -> tuple[sparse.dok_matrix, sparse.dok_matrix]:
     """
     Create two sparse matrices with umi and read counts.
 

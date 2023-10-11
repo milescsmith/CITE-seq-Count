@@ -25,7 +25,7 @@ def write_to_files(
     """
     prefix = outfolder.joinpath(f"{data_type}_count").resolve()
     if not prefix.exists():
-        prefix.mkdir(exist_ok=True)
+        prefix.mkdir(exist_ok=True, parents=True)
     io.mmwrite(prefix.joinpath("matrix.mtx"), sparse_matrix)
 
     with gzip.open(prefix.joinpath("barcodes.tsv.gz"), "wb") as barcode_file:
@@ -58,7 +58,7 @@ def write_dense(
     """
     outfolder = outfolder.resolve()
     if not outfolder.exists():
-        outfolder.mkdir(exist_ok=True)
+        outfolder.mkdir(exist_ok=True, parents=True)
     pandas_dense = pd.DataFrame(data=sparse_matrix.todense(), columns=tuple(columns), index=tuple(index))
     pandas_dense.to_csv(path_or_buf=outfolder.joinpath(filename.name), sep="\t")
 
@@ -76,7 +76,7 @@ def write_unmapped(merged_no_match: Counter[str], top_unknowns: int, outfolder: 
 
     top_unmapped = merged_no_match.most_common(top_unknowns)
     if not outfolder.exists():
-        outfolder.mkdir(exist_ok=True)
+        outfolder.mkdir(exist_ok=True, parents=True)
 
     with outfolder.joinpath(filename).open("w") as unknown_file:
         unknown_file.write("tag,count\n")

@@ -3,14 +3,15 @@ from typing import Annotated
 
 import typer
 from loguru import logger
-from rich.console import Console
+
+# from rich.console import Console
 
 try:
     __version__ = version(__name__)
 except PackageNotFoundError:  # pragma: no cover
     __version__ = "unknown"
 
-console = Console()
+# console = Console()
 logger.disable("cite-seq-counts")
 
 app = typer.Typer(
@@ -18,7 +19,7 @@ app = typer.Typer(
     help="Count paired oligo-tagged antibody based reads in single cell sequencing data",
     add_completion=False,
     no_args_is_help=True,
-    rich_markup_mode="rich",
+    # rich_markup_mode="rich",
 )
 
 verbosity_level = 0
@@ -27,7 +28,7 @@ verbosity_level = 0
 def version_callback(value: bool) -> None:  # noqa FBT001
     """Prints the version of the package."""
     if value:
-        console.print(f"[yellow]CITE-seq-count[/] version: [bold blue]{__version__}[/]")
+        print(f"[yellow]CITE-seq-count[/] version: [bold blue]{__version__}[/]")
         raise typer.Exit()
 
 

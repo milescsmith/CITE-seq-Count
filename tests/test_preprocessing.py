@@ -8,7 +8,7 @@ from cite_seq_count import preprocessing
 
 
 @pytest.fixture
-def data():
+def data() -> None:
     from collections import OrderedDict
     from itertools import islice
 
@@ -24,8 +24,10 @@ def data():
     pytest.correct_R2_multipath = "path/to/R2_1.fastq.gz,path/to/R2_2.fastq.gz"
     pytest.incorrect_R2_multipath = "path/to/R2_1.fastq.gz,path/to/R2_2.fastq.gz,path/to/R2_3.fastq.gz"
 
-    pytest.correct_multipath_result = ([Path("path/to/R1_1.fastq.gz"), Path("path/to/R1_2.fastq.gz")],
-                                       [Path("path/to/R2_1.fastq.gz"), Path("path/to/R2_2.fastq.gz")])
+    pytest.correct_multipath_result = (
+        [Path("path/to/R1_1.fastq.gz"), Path("path/to/R1_2.fastq.gz")],
+        [Path("path/to/R2_1.fastq.gz"), Path("path/to/R2_2.fastq.gz")]
+        )
 
     # Create some variables to compare to
     pytest.correct_whitelist = {"ACTGTTTTATTGGCCT", "TTCATAAGGTAGGGAT"}
@@ -54,33 +56,33 @@ def data():
     pytest.barcode_umi_length = 26
 
 @pytest.mark.dependency()
-def test_parse_whitelist_csv(data):
-    assert preprocessing.parse_whitelist_csv(pytest.correct_whitelist_path, 16, 1) == (pytest.correct_whitelist,1)
+def test_parse_whitelist_csv(data: None) -> None:
+    assert preprocessing.parse_whitelist_csv(pytest.correct_whitelist_path, 16, 1) == (pytest.correct_whitelist,1) # noqa S101
 
 @pytest.mark.dependency()
-def test_parse_tags_csv(data):
-    assert preprocessing.parse_tags_csv(pytest.correct_tags_path) == pytest.correct_tags
+def test_parse_tags_csv(data: None) -> None:
+    assert preprocessing.parse_tags_csv(pytest.correct_tags_path) == pytest.correct_tags # noqa S101
 
 @pytest.mark.dependency(depends=["test_parse_tags_csv"])
-def test_check_tags(data):
-    assert preprocessing.check_tags(pytest.correct_tags, 5) == pytest.correct_ordered_tags
+def test_check_tags(data: None) -> None:
+    assert preprocessing.check_tags(pytest.correct_tags, 5) == pytest.correct_ordered_tags # noqa S101
 
 @pytest.mark.dependency(depends=["test_check_tags"])
-def test_check_distance_too_big_between_tags(data):
+def test_check_distance_too_big_between_tags(data: None) -> None:
     with pytest.raises(SystemExit):
         preprocessing.check_tags(pytest.correct_tags, 8)
 
 @pytest.mark.dependency(depends=["test_parse_whitelist_csv"])
-def test_check_barcodes_lengths(data):
-    assert preprocessing.check_barcodes_lengths(26, 1, 16, 17, 26) == (pytest.barcode_slice, pytest.umi_slice, pytest.barcode_umi_length)
+def test_check_barcodes_lengths(data: None) -> None:
+    assert preprocessing.check_barcodes_lengths(26, 1, 16, 17, 26) == (pytest.barcode_slice, pytest.umi_slice, pytest.barcode_umi_length) # noqa S101
 
 @pytest.mark.dependency()
-def test_get_n_lines(data):
-  assert preprocessing.get_n_lines(pytest.correct_R1_path) == (200 * 4)
+def test_get_n_lines(data: None):
+  assert preprocessing.get_n_lines(pytest.correct_R1_path) == (200 * 4) # noqa S101
 
 @pytest.mark.dependency(depends=["test_get_n_lines"])
-def test_get_n_lines_not_multiple_of_4(data):
-  with pytest.raises(SystemExit):
+def test_get_n_lines_not_multiple_of_4(data: None) -> None:
+  with pytest.raises(preprocessing.NotMultipleofFourError):
     preprocessing.get_n_lines(pytest.corrupt_R1_path)
 
 # @pytest.mark.dependency()

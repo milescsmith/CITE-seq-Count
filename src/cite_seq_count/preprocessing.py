@@ -19,6 +19,18 @@ STRIP_CHARS = '"0123456789- \t\n'
 gzopen = partial(gzip.open, mode="rt")
 
 
+class MismatchedReadlengthsError(Exception):
+    def __init__(self, message="Read lengths do not match"):
+        self.message = message
+        super().__init__(message)
+
+
+class NotMultipleofFourError(Exception):
+    def __init__(self, message="Number of FASTQ lines is not multiple of 4"):
+        self.message = message
+        super().__init__(message)
+
+
 def get_indexes(start_index: int, chunk_size: int, nth: int) -> list[int]:
     """
     Creates indexes from a reference index, a chunk size an nth number
@@ -210,6 +222,7 @@ def get_read_length(filename: Path) -> int:
         for sequence in secondlines:
             read_length = len(sequence.rstrip())
             if temp_length != read_length:
+                raise
                 logger.exception(
                     f"[ERROR] Sequence length in {filename} is not consistent. Please, trim all "
                     "sequences at the same length.\n"
@@ -243,11 +256,13 @@ def check_barcodes_lengths(
     umi_slice = slice(umi_first - 1, umi_last)
 
     if barcode_umi_length > read1_length:
-        logger.exception(
+        msg = (
             "[ERROR] Read1 length is shorter than the option you are using for "
             "Cell and UMI barcodes length. Please, check your options and rerun.\n\n"
             "Exiting the application.\n"
         )
+        logger.exception(msg)
+        raise MismatchedReadlengthsError
     elif barcode_umi_length < read1_length:
         rprint(
             f"[WARNING] Read1 length is {read1_length}bp but you are using {barcode_umi_length}bp for Cell "
@@ -294,6 +309,7 @@ def get_n_lines(file_path: Path) -> int:
         n_lines = sum(bl.count("\n") for bl in blocks(f))
     if n_lines % 4 != 0:
         logger.exception(f"{file_path}'s number of lines is not a multiple of 4. The file might be corrupted. Exiting")
+        raise NotMultipleofFourError
     return n_lines
 
 
