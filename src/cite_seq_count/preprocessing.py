@@ -33,7 +33,7 @@ def get_indexes(start_index: int, chunk_size: int, nth: int) -> tuple[int, int]:
     """
     start_index = nth * chunk_size
     stop_index = chunk_size + nth * chunk_size
-    return [start_index, stop_index]
+    return start_index, stop_index
 
 
 def chunk_reads(n_reads: int, n: int) -> list[list[int]]:
@@ -258,7 +258,7 @@ def check_barcodes_lengths(
     return (barcode_slice, umi_slice, barcode_umi_length)
 
 
-def blocks(files: BinaryIO, size: int = 65536) -> Generator[int, None, None]:
+def blocks(files: BinaryIO, size: int = 65536) -> Generator[bytes, None, None]:
     """
     A fast way of counting the lines of a large file.
     Ref:
@@ -293,7 +293,7 @@ def get_n_lines(file_path: Path) -> int:
     with gzip.open(file_path, "rt", encoding="utf-8", errors="ignore") as f:
         n_lines = sum(bl.count("\n") for bl in blocks(f))
     if n_lines % 4 != 0:
-        sys.exit(f"{file_path}'s number of lines is not a multiple of 4. The file " "might be corrupted.\n Exiting")
+        logger.exception(f"{file_path}'s number of lines is not a multiple of 4. The file might be corrupted. Exiting")
     return n_lines
 
 
@@ -312,7 +312,7 @@ def get_read_paths(read1_path: tuple[Path], read2_path: tuple[Path]) -> tuple[tu
     # _read1_path = read1_path.split(",")
     # _read2_path = read2_path.split(",")
     if len(read1_path) != len(read2_path):
-        sys.exit(
-            f"Unequal number of read1 ({len(read1_path)}) and read2({len(read2_path)}) files provided" "\n Exiting"
+        logger.exception(
+            f"Unequal number of read1 ({len(read1_path)}) and read2({len(read2_path)}) files provided. Exiting"
         )
     return (read1_path, read2_path)

@@ -4,6 +4,7 @@ import sys
 import time
 from collections import Counter, defaultdict
 from itertools import islice
+from pathlib import Path
 
 import Levenshtein
 import pybktree
@@ -16,7 +17,7 @@ from umi_tools import network, whitelist_methods
 from cite_seq_count import secondsToText
 
 
-def find_best_match(TAG_seq, tags, maximum_distance):
+def find_best_match(TAG_seq: str, tags: dict[str, str], maximum_distance: int) -> str:
     """
     Find the best match from the list of tags.
 
@@ -44,7 +45,7 @@ def find_best_match(TAG_seq, tags, maximum_distance):
     return "unmapped"
 
 
-def find_best_match_shift(TAG_seq, tags, maximum_distance):
+def find_best_match_shift(TAG_seq: str, tags: dict[str, str], maximum_distance: int) -> str:
     """
     Find the best match from the list of tags with sliding window.
 
@@ -76,17 +77,17 @@ def find_best_match_shift(TAG_seq, tags, maximum_distance):
 
 
 def map_reads(
-    read1_path,
-    read2_path,
-    tags,
-    barcode_slice,
-    umi_slice,
-    indexes,
-    debug,
-    start_trim,
-    maximum_distance,
-    sliding_window,
-):
+    read1_path: Path,
+    read2_path: Path,
+    tags: dict[str, str],
+    barcode_slice: slice,
+    umi_slice: slice,
+    indexes: tuple[int, int],
+    debug: bool,
+    start_trim: int,
+    maximum_distance: int,
+    sliding_window: bool,
+) -> tuple[dict[str, str], Counter[str]]:
     """Read through R1/R2 files and generate a islice starting at a specific index.
 
     It reads both Read1 and Read2 files, creating a dict based on cell barcode.
@@ -175,10 +176,10 @@ def merge_results(parallel_results):
         reads_per_cell (Counter): Total reads per cell as a Counter
         merged_no_match (Counter): Unmapped tags as a Counter
     """
-    merged_results = {}
-    merged_no_match = Counter()
-    umis_per_cell = Counter()
-    reads_per_cell = Counter()
+    merged_results: defaultdict[str, Counter[str]] = {}
+    merged_no_match: Counter[str] = Counter()
+    umis_per_cell: Counter[str] = Counter()
+    reads_per_cell: Counter[str] = Counter()
     for chunk in parallel_results:
         mapped = chunk[0]
         unmapped = chunk[1]

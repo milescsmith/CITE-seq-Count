@@ -1,5 +1,4 @@
 import gzip
-import os
 import shutil
 from collections import Counter
 from pathlib import Path
@@ -9,7 +8,7 @@ from scipy import io, sparse
 
 
 def write_to_files(
-    sparse_matrix,
+    sparse_matrix: sparse.dok_matrix,
     top_cells: set[str],
     ordered_tags_map: dict[str, int],
     data_type: str,  # should probably be an enum
@@ -24,7 +23,7 @@ def write_to_files(
         data_type (string): A string definning if the data is umi or read based.
         outfolder (string): Path to the output folder.
     """
-    prefix = outfolder.joinpath(f"{data_type}_count")
+    prefix = outfolder.joinpath(f"{data_type}_count").resolve()
     if not prefix.exists():
         prefix.mkdir(exist_ok=True)
     io.mmwrite(prefix.joinpath("matrix.mtx"), sparse_matrix)
@@ -38,7 +37,7 @@ def write_to_files(
             feature_file.write(f"{feature}\n".encode())
 
     with open(prefix.joinpath("matrix.mtx"), "rb") as mtx_in:
-        with gzip.open(os.path.join(prefix, "matrix.mtx") + ".gz", "wb") as mtx_gz:
+        with gzip.open(prefix.joinpath("matrix.mtx.gz"), "wb") as mtx_gz:
             shutil.copyfileobj(mtx_in, mtx_gz)
 
     prefix.joinpath("matrix.mtx").unlink()
@@ -57,13 +56,14 @@ def write_dense(
        outfolder (str): Output folder
        filename (str): Filename
     """
+    outfolder = outfolder.resolve()
     if not outfolder.exists():
         outfolder.mkdir(exist_ok=True)
     pandas_dense = pd.DataFrame(data=sparse_matrix.todense(), columns=tuple(columns), index=tuple(index))
-    pandas_dense.to_csv(path_or_buf=outfolder.joinpath(filename), sep="\t")
+    pandas_dense.to_csv(path_or_buf=outfolder.joinpath(filename.name), sep="\t")
 
 
-def write_unmapped(merged_no_match: Counter, top_unknowns: int, outfolder: Path, filename: Path) -> None:
+def write_unmapped(merged_no_match: Counter[str], top_unknowns: int, outfolder: Path, filename: Path) -> None:
     """
     Writes a list of top unmapped sequences
 
