@@ -568,7 +568,7 @@ def main(
     io.write_dense(
         sparse_matrix=umi_aberrant_matrix,
         index=list(ordered_tags_map.keys()),
-        columns=aberrant_cells,
+        columns=tuple(aberrant_cells),
         outfolder=outfolder.joinpath("uncorrected_cells"),
         filename=outfolder.joinpath("dense_umis.tsv"),
     )

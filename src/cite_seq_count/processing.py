@@ -398,7 +398,11 @@ def find_true_to_false_map(barcode_tree, cell_barcodes, whitelist, collapsing_th
     return true_to_false
 
 
-def generate_sparse_matrices(final_results, ordered_tags_map, top_cells):
+def generate_sparse_matrices(
+    final_results: defaultdict[str, defaultdict[str, Counter[str]]],
+    ordered_tags_map: dict[str, int],
+    top_cells: set[str]
+    ) -> tuple[sparse.dok_matrix, sparse.dok_matrix]:
     """
     Create two sparse matrices with umi and read counts.
 
@@ -411,12 +415,11 @@ def generate_sparse_matrices(final_results, ordered_tags_map, top_cells):
         read_results_matrix (scipy.sparse.dok_matrix): Read counts
 
     """
-    # disabling read_results_matrix because it is never used
     umi_results_matrix = sparse.dok_matrix((len(ordered_tags_map), len(top_cells)), dtype=int32)
-    # read_results_matrix = sparse.dok_matrix((len(ordered_tags_map), len(top_cells)), dtype=int32)
+    read_results_matrix = sparse.dok_matrix((len(ordered_tags_map), len(top_cells)), dtype=int32)
     for i, cell_barcode in enumerate(top_cells):
         for tag in final_results[cell_barcode]:
             if final_results[cell_barcode][tag]:
                 umi_results_matrix[ordered_tags_map[tag], i] = len(final_results[cell_barcode][tag])
-                # read_results_matrix[ordered_tags_map[tag], i] = sum(final_results[cell_barcode][tag].values())
-    return umi_results_matrix  # read_results_matrix)
+                read_results_matrix[ordered_tags_map[tag], i] = sum(final_results[cell_barcode][tag].values())
+    return umi_results_matrix, read_results_matrix
