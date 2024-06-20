@@ -1,5 +1,6 @@
 import importlib.resources as ir
-import io
+
+# import io
 from pathlib import Path
 
 import pytest
@@ -10,7 +11,7 @@ from cite_seq_count import preprocessing
 @pytest.fixture
 def data() -> None:
     from collections import OrderedDict
-    from itertools import islice
+    # from itertools import islice
 
     # Test file paths
     pytest.correct_whitelist_path = ir.files("tests").joinpath("test_data", "whitelists", "correct.csv")

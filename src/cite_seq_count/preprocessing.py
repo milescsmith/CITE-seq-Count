@@ -2,12 +2,12 @@ import csv
 import gzip
 import sys
 from collections import OrderedDict
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from functools import partial
 from itertools import combinations, islice
 from math import floor
 from pathlib import Path
-from typing import BinaryIO
+from typing import BinaryIO, IO
 
 import Levenshtein
 import regex
@@ -20,13 +20,13 @@ gzopen = partial(gzip.open, mode="rt")
 
 
 class MismatchedReadlengthsError(Exception):
-    def __init__(self, message="Read lengths do not match"):
+    def __init__(self, message: str="Read lengths do not match") -> None:
         self.message = message
         super().__init__(message)
 
 
 class NotMultipleofFourError(Exception):
-    def __init__(self, message="Number of FASTQ lines is not multiple of 4"):
+    def __init__(self, message: str="Number of FASTQ lines is not multiple of 4") -> None:
         self.message = message
         super().__init__(message)
 
@@ -87,7 +87,7 @@ def parse_whitelist_csv(filename: Path, barcode_length: int, collapsing_threshol
     """
     cell_pattern = regex.compile(fr"[ATGC]{{{barcode_length}}}")
 
-    file_open = gzopen if filename.suffix == ".gz" else open
+    file_open: Callable[[str | Path, str], IO] = gzopen if filename.suffix == ".gz" else open
     with file_open(filename) as csv_file:
         whitelist = [
             row[0].strip(STRIP_CHARS)

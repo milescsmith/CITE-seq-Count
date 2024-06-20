@@ -5,6 +5,7 @@ import pytest
 from cite_seq_count import io
 
 
+# pytest_plugins = ("pytest_profiling")
 @pytest.fixture
 def data() -> None:
     from collections import OrderedDict

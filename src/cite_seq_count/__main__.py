@@ -20,12 +20,7 @@ from multiprocess import Pool, cpu_count
 from rich import print as rprint
 from rich.traceback import install
 from tqdm.rich import tqdm
-
-# import cite_seq_count
-# install(suppress=[cite_seq_count])
-install()
-
-better_exceptions.hook()
+from yaml import dump
 
 from cite_seq_count import (
     __version__,
@@ -38,6 +33,11 @@ from cite_seq_count import (
     version_callback,
 )
 from cite_seq_count.logger import init_logger
+
+install()
+
+better_exceptions.hook()
+
 
 logger.remove()
 
@@ -85,33 +85,39 @@ def create_report(
     mapped_perc = round((total_mapped / n_reads) * 100)
     unmapped_perc = round((total_unmapped / n_reads) * 100)
 
+    report_dict = {
+        "Date:": datetime.datetime.now(tz=tz.tzlocal()).strftime('%Y-%m-%d'),
+        "Running time:": secondsToText.secondsToText(time.time() - start_time),
+        "CITE-seq-Count Version:" : __version__,
+        "Reads processed:" : n_reads,
+        "Percentage mapped:" : mapped_perc,
+        "Percentage unmapped:" : unmapped_perc,
+        "Uncorrected cells:" : len(bad_cells),
+        "Correction:" : {
+            "Cell barcodes collapsing threshold:" : bc_threshold,
+            "Cell barcodes corrected:" : bcs_corrected,
+            "UMI collapsing threshold:" : umi_threshold,
+            "UMIs corrected:" : umis_corrected,
+        },
+        "Run parameters:" : {
+            "Read1_paths:" : read1_path,
+            "Read2_paths:" : read2_path,
+            "Cell barcode:" : {
+                "First position:" : cb_first,
+                "Last position:" : cb_last
+            },
+            "UMI barcode:" : {
+                "First position:": umi_first,
+                "Last position:": umi_last
+            },
+            "Expected cells:" : expected_cells,
+            "Tags max errors:" : max_error,
+            "Start trim:" : start_trim,
+        }
+    }
+
     with outfolder.joinpath("run_report.yaml").open("w") as report_file:
-        report_file.write(
-            f"Date: {datetime.datetime.now(tz=tz.tzlocal()).strftime('%Y-%m-%d')}"
-            f"Running time: {secondsToText.secondsToText(time.time() - start_time)}"
-            f"CITE-seq-Count Version: {__version__}"
-            f"Reads processed: {n_reads}"
-            f"Percentage mapped: {mapped_perc}"
-            f"Percentage unmapped: {unmapped_perc}"
-            f"Uncorrected cells: {len(bad_cells)}"
-            f"Correction:"
-            f"\tCell barcodes collapsing threshold: {bc_threshold}"
-            f"\tCell barcodes corrected: {bcs_corrected}"
-            f"\tUMI collapsing threshold: {umi_threshold}"
-            f"\tUMIs corrected: {umis_corrected}"
-            f"Run parameters:"
-            f"\tRead1_paths: {read1_path}"
-            f"\tRead2_paths: {read2_path}"
-            f"\tCell barcode:"
-            f"\t\tFirst position: {cb_first}"
-            f"\t\tLast position: {cb_last}"
-            f"\tUMI barcode:"
-            f"\t\tFirst position: {umi_first}"
-            f"\t\tLast position: {umi_last}"
-            f"\tExpected cells: {expected_cells}"
-            f"\tTags max errors: {max_error}"
-            f"\tStart trim: {start_trim}"
-        )
+        dump(report_dict, report_file)
 
 
 @app.callback(invoke_without_command=True)
@@ -121,7 +127,7 @@ def create_report(
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
 )
 def main(
-    read1_path: Annotated[
+    read1_path_list: Annotated[
         list[Path],
         typer.Option(
             "-R1",
@@ -133,7 +139,7 @@ def main(
             # rich_help_panel="Inputs",
         ),
     ],
-    read2_path: Annotated[
+    read2_path_list: Annotated[
         list[Path],
         typer.Option(
             "-R2",
@@ -213,19 +219,16 @@ def main(
         typer.Option(
             "--bc_collapsing_dist",
             help="threshold for cellular barcode collapsing.",
-            # rich_help_panel="Barcodes",
+            rich_help_panel="Barcodes",
         ),
     ] = 1,
-    # cells = parser.add_argument_group(
-    #     "Cells", description=("Expected number of cells and potential whitelist")
-    # ),
     expected_cells: Annotated[
         int,
         typer.Option(
             "-cells",
             "--expected_cells",
             help=("Number of expected cells from your run."),
-            # rich_help_panel="Cells",
+            rich_help_panel="Cells",
         ),
     ] = 0,
     whitelist_file: Annotated[
@@ -245,23 +248,19 @@ def main(
                 "\t  GCTAGTCAGGAT-1\n\n"
                 "\t  CGACTGCTAACG-1\n"
             ),
-            # rich_help_panel="Cells",
+            rich_help_panel="Cells",
             file_okay=True,
             resolve_path=True,
             dir_okay=False,
             readable=True,
         ),
     ] = None,
-    # FILTERS group.
-    # filters = parser.add_argument_group(
-    #     "TAG filters", description=("Filtering and trimming for read2.")
-    # ),
     max_error: Annotated[
         int,
         typer.Option(
             "--max-errors",
             help=("Maximum Levenshtein distance allowed for antibody barcodes."),
-            # rich_help_panel="Filters",
+            rich_help_panel="Filters",
         ),
     ] = 2,
     start_trim: Annotated[
@@ -270,7 +269,7 @@ def main(
             "-trim",
             "--start-trim",
             help=("Number of bases to discard from read2."),
-            # rich_help_panel="Filters",
+            rich_help_panel="Filters",
         ),
     ] = 0,
     # Remaining arguments.
@@ -368,7 +367,7 @@ def main(
     ab_map = preprocessing.check_tags(ab_map, max_error)
 
     # Identify input file(s)
-    read1_paths, read2_paths = preprocessing.get_read_paths(read1_path, read2_path)
+    read1_paths, read2_paths = preprocessing.get_read_paths(read1_path_list, read2_path_list)
 
     # preprocessing and processing occur in separate loops so the program can crash earlier if
     # one of the inputs is not valid.
@@ -495,9 +494,8 @@ def main(
         if len(umis_per_cell) <= expected_cells:
             rprint(
                 f"Number of expected cells, {expected_cells}, is higher "
-                f"than number of cells found {len(umis_per_cell)}.\nNot performing"
+                f"than number of cells found {len(umis_per_cell)}.\nNot performing "
                 "cell barcode correction"
-                ""
             )
             bcs_corrected = 0
         else:

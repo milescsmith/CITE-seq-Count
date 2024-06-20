@@ -1,0 +1,24 @@
+'CITE-seq-Count Version:': 1.5.5
+'Correction:':
+  'Cell barcodes collapsing threshold:': 1
+  'Cell barcodes corrected:': 0
+  'UMI collapsing threshold:': 2
+  'UMIs corrected:': 0
+'Date:': '2023-12-07'
+'Percentage mapped:': 91
+'Percentage unmapped:': 9
+'Reads processed:': 10000
+'Run parameters:':
+  'Cell barcode:':
+    'First position:': 1
+    'Last position:': 16
+  'Expected cells:': 10000
+  'Read1_paths:': /home/milo/workspace/CITE-seq-Count/tests/test_data/real_data/test_3_fixed_prot_R1_subset.fq.gz
+  'Read2_paths:': /home/milo/workspace/CITE-seq-Count/tests/test_data/real_data/test_3_fixed_prot_R2_subset.fq.gz
+  'Start trim:': 0
+  'Tags max errors:': 2
+  'UMI barcode:':
+    'First position:': 17
+    'Last position:': 35
+'Running time:': 9.0 minutes, 38.01 seconds
+'Uncorrected cells:': 0

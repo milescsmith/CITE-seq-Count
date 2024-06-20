@@ -19,7 +19,7 @@ app = typer.Typer(
     help="Count paired oligo-tagged antibody based reads in single cell sequencing data",
     add_completion=False,
     no_args_is_help=True,
-    # rich_markup_mode="rich",
+    rich_markup_mode="markdown",
 )
 
 verbosity_level = 0
